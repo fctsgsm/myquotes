@@ -1,185 +1,311 @@
-
-
-
-import 'dart:ui' as UI;
-
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:esys_flutter_share_plus/esys_flutter_share_plus.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
-import 'package:myquotes/MyDrawer.dart';
-import 'package:myquotes/QuotesPage.dart';
-import 'firebase_options.dart';
-// import 'package:share_plus/share_plus.dart';
+import 'package:flutter_firebase_crud_app/widgets.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  runApp(MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Status | Quotes',
+  await Firebase.initializeApp();
+  runApp(
+    MaterialApp(
+      home: MyApp(),
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        brightness: Brightness.light,
+        primaryColor: Colors.amber[500],
       ),
-      home: MainPage(),
-    );
-  }
+    ),
+  );
 }
 
-class MainPage extends StatefulWidget {
+class MyApp extends StatefulWidget {
   @override
-  _MainPageState createState() => _MainPageState();
+  _MyAppState createState() => _MyAppState();
 }
 
-class _MainPageState extends State<MainPage> {
-  List<Map<String, dynamic>> quotesData = [
-    {'textdata': 'Loading...'}
-  ];
-
-  int currentIndex = 0;
-  PageController pg = new PageController();
-  String selectedLanguage = 'English'; // Default language
-  List<dynamic> languageNames = [];
-
-  @override
-  void initState() {
-    super.initState();
-    getLanguages();
+class _MyAppState extends State<MyApp> {
+  // ====================================================== //
+  String stdName, stdID, programID;
+  double stdGPA;
+  getStudentName(name) {
+    this.stdName = name;
   }
 
-  getLanguages() async {
-    await FirebaseFirestore.instance
-        .collection('languages_dropdown')
-        .doc('languages_list')
-        .get()
-        .then((value) {
-      languageNames = value.data()?['languages'];
-      print(languageNames);
-      fetchQuotesData();
-      setState(() {});
+  getStudentID(id) {
+    this.stdID = id;
+  }
+
+  getStudyProgramID(pid) {
+    this.programID = pid;
+  }
+
+  getStudentCGPA(result) {
+    this.stdGPA = double.parse(result);
+  }
+
+  // TODO Create Data
+  createData() {
+    DocumentReference documentReference =
+        FirebaseFirestore.instance.collection('crud').doc(stdName);
+
+    // create Map to send data in key:value pair form
+    Map<String, dynamic> students = ({
+      "studentName": stdName,
+      "studentID": stdID,
+      "studyProgramID": programID,
+      "studentCGPA": stdGPA
+    });
+
+    // send data to Firebase
+    documentReference
+        .set(students)
+        .whenComplete(() => print('$stdName created'));
+  }
+
+  // TODO Read Data
+  readData() {
+    DocumentReference documentReference =
+        FirebaseFirestore.instance.collection('crud').doc(stdName);
+
+    documentReference.get().then((dataSnapshot) {
+      print(dataSnapshot.data()["studentName"]);
+      print(dataSnapshot.data()["studentID"]);
+      print(dataSnapshot.data()["studyProgramID"]);
+      print(dataSnapshot.data()["studentCGPA"]);
     });
   }
 
-  //Firebase Data Fetch
-  Future<void> fetchQuotesData() async {
-    try {
-      // print('Selected Language: ${languageNames[selectedLanguage.index]}');
+  // TODO Update Data
+  updateData() {
+    DocumentReference documentReference =
+        FirebaseFirestore.instance.collection('crud').doc(stdName);
 
-      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
-          .collection('quotes_collection')
-          .where('Language', isEqualTo: selectedLanguage)
-          .get();
-
-      if (querySnapshot.docs.isNotEmpty) {
-        setState(() {
-          quotesData = querySnapshot.docs
-              .map((doc) => doc.data() as Map<String, dynamic>)
-              .toList();
-          // print(quotesData.toString());
-          shuffleQuotesData();
-        });
-      }
-    } catch (e) {
-      print("Error fetching quotes data: $e");
-    }
-  }
-  GlobalKey key= GlobalKey();
-  // Dropdown for Language
-  Widget _buildLanguageDropdown() {
-    return DropdownButton<String>(
-      value: selectedLanguage,
-      onChanged: (String? newValue) {
-        // Ensure newValue is non-null before updating the state
-        if (newValue != null) {
-          setState(() {
-            selectedLanguage = newValue;
-          });
-          // Fetch data when language changes
-          fetchQuotesData();
-        }
-      },
-      items: languageNames.map((dynamic language) {
-        return DropdownMenuItem<String>(
-          value: language,
-          child: Text(language, style: TextStyle(fontSize: 20.0,)),
-        );
-      }).toList(),
-    );
-  }
-
-  //SHufle Quotes
-
-  // Shuffle the list method
-  void shuffleQuotesData() {
-    setState(() {
-      quotesData.shuffle();
+    Map<String, dynamic> students = ({
+      "studentName": stdName,
+      "studentID": stdID,
+      "studyProgramID": programID,
+      "studentCGPA": stdGPA
     });
+
+    // update data to Firebase
+    documentReference
+        .update(students)
+        .whenComplete(() => print('$stdName updated'));
   }
+
+  // TODO Delete Data
+  deleteData() {
+    DocumentReference documentReference =
+        FirebaseFirestore.instance.collection('crud').doc(stdName);
+
+    // delete data from Firebase
+    documentReference.delete().whenComplete(() => print('$stdName deleted'));
+  }
+  // ====================================================== //
 
   @override
   Widget build(BuildContext context) {
-    // print("ARTICLE DATA");
-    // print(quotesData.length);
     return Scaffold(
       appBar: AppBar(
-        title: Text('Status | Quotes'),
-        actions: [
-          _buildLanguageDropdown(),
-        ],
+        centerTitle: true,
+        title: Text('CRUD App'),
       ),
-      drawer: MyDrawer(),
-      floatingActionButton: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          FloatingActionButton.extended(label: Text("Share"),icon: Icon(Icons.share),onPressed: () async {
-            RenderRepaintBoundary boundary =
-            key.currentContext!.findRenderObject() as RenderRepaintBoundary;
-            UI.Image image = await boundary.toImage(pixelRatio: 3.0);
-            ByteData? byteData =
-            await image.toByteData(format: UI.ImageByteFormat.png);
-            Uint8List pngBytes = byteData!.buffer.asUint8List();
-
-            // Here, you can use the `pngBytes` to share or save the image.
-            // For example, you can use the `share` package to share the image.
-
-            // For demonstration purposes, let's print the bytes.
-            // print(pngBytes);
-            // Share.share(quotesData[currentIndex]['textdata']+'\n check out my website https://example.com',);
-            await Share.file('esys image', 'esys.png', pngBytes.buffer.asUint8List(), 'image/png', text: 'Latest Status and Quotes are available at'+ '\nhttps://play.google.com/store/apps/details?id=com.gsm.myquotes');
-          },),
-          SizedBox(width: 10,),
-          FloatingActionButton(
-            onPressed: () {
-              pg.nextPage(duration: Duration(seconds: 1), curve: Curves.ease);
-            },
-            child: Icon(Icons.arrow_downward_outlined),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.all(12.0),
+          child: Column(
+            children: [
+              TextFormField(
+                style: simpleTextStyle(),
+                decoration: textFieldInputDecoration(
+                  'Name',
+                  Icon(Icons.account_circle_outlined),
+                ),
+                onChanged: (String name) {
+                  setState(() {
+                    getStudentName(name);
+                  });
+                },
+              ),
+              SizedBox(height: 10.0),
+              TextFormField(
+                style: simpleTextStyle(),
+                decoration: textFieldInputDecoration(
+                  'Student ID',
+                  Icon(Icons.perm_identity_outlined),
+                ),
+                onChanged: (String sID) {
+                  getStudentID(sID);
+                },
+              ),
+              SizedBox(height: 10.0),
+              TextFormField(
+                style: simpleTextStyle(),
+                decoration: textFieldInputDecoration(
+                  'Study Program ID',
+                  Icon(Icons.perm_identity_outlined),
+                ),
+                onChanged: (String pID) {
+                  getStudyProgramID(pID);
+                },
+              ),
+              SizedBox(height: 10.0),
+              TextFormField(
+                style: simpleTextStyle(),
+                decoration: textFieldInputDecoration(
+                  'CGPA',
+                  Icon(Icons.confirmation_number_outlined),
+                ),
+                onChanged: (String gpa) {
+                  getStudentCGPA(gpa);
+                },
+              ),
+              SizedBox(height: 15.0),
+              Row(
+                children: [
+                  Expanded(
+                    // ignore: deprecated_member_use
+                    child: RaisedButton(
+                      padding: EdgeInsets.symmetric(vertical: 15.0),
+                      elevation: 8.0,
+                      onPressed: () => createData(),
+                      color: Colors.green,
+                      child: Text('Create',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      textColor: Colors.white,
+                      shape: raisedButtonBorder(),
+                    ),
+                  ),
+                  Expanded(
+                    // ignore: deprecated_member_use
+                    child: RaisedButton(
+                      padding: EdgeInsets.symmetric(vertical: 15.0),
+                      elevation: 8.0,
+                      onPressed: () => readData(),
+                      color: Colors.blue,
+                      child: Text('Read',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      textColor: Colors.white,
+                      shape: raisedButtonBorder(),
+                    ),
+                  ),
+                  Expanded(
+                    // ignore: deprecated_member_use
+                    child: RaisedButton(
+                      padding: EdgeInsets.symmetric(vertical: 15.0),
+                      elevation: 8.0,
+                      onPressed: () => updateData(),
+                      color: Colors.orange,
+                      child: Text('Update',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      textColor: Colors.white,
+                      shape: raisedButtonBorder(),
+                    ),
+                  ),
+                  Expanded(
+                    // ignore: deprecated_member_use
+                    child: RaisedButton(
+                      padding: EdgeInsets.symmetric(vertical: 15.0),
+                      elevation: 8.0,
+                      onPressed: () => deleteData(),
+                      color: Colors.red,
+                      child: Text('Delete',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      textColor: Colors.white,
+                      shape: raisedButtonBorder(),
+                    ),
+                  ),
+                ],
+              ),
+              Divider(thickness: 1.0, height: 25.0, color: Colors.green),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Name',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      'Student ID',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      'Program ID',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      'CGPA',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 10.0),
+              StreamBuilder(
+                stream:
+                    FirebaseFirestore.instance.collection('crud').snapshots(),
+                // ignore: missing_return
+                builder: (context, snapshot) {
+                  if (snapshot.hasData) {
+                    return ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: snapshot.data.docs.length,
+                      itemBuilder: (context, index) {
+                        DocumentSnapshot documentSnapshot =
+                            snapshot.data.docs[index];
+                        return Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                documentSnapshot["studentName"],
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                documentSnapshot["studentID"],
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                documentSnapshot["studyProgramID"],
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                documentSnapshot["studentCGPA"].toString(),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  } else {
+                    return Align(
+                      alignment: FractionalOffset.bottomCenter,
+                      child: CircularProgressIndicator(
+                        backgroundColor: Colors.black,
+                      ),
+                    );
+                  }
+                },
+              ),
+            ],
           ),
-        ],
-      ),
-      body: RepaintBoundary(
-        key:key,
-        child: PageView.builder(
-          controller: pg,
-          scrollDirection: Axis.vertical,
-          itemCount: quotesData.length,
-          itemBuilder: (context, index) {
-            return QuotesPage(quotesData[index]);
-          },
-          onPageChanged: (int index) {
-            setState(() {
-              currentIndex = index;
-            });
-          },
         ),
       ),
     );
